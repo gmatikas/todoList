@@ -11,9 +11,20 @@ function addItem() {
 	del.className = 'fa fa-remove text-danger';
 	item.appendChild(del);
 
+	item.addEventListener('click', (e) => { handle(e); }, false);
+
 	const todoList = document.getElementById('todo');
 	todoList.insertBefore(item, todoList.firstChild);
 	document.getElementById('newItem').value = '';
+}
+
+function handle(e) {
+	if (e.target.tagName === 'A') moveItem(e.target);
+	else deleteItem(e.target);
+}
+
+function deleteItem(item) {
+	item.parentNode.parentNode.removeChild(item.parentNode);
 }
 
 function moveItem(old) {
@@ -27,6 +38,8 @@ function moveItem(old) {
 	const del = document.createElement('span');
 	del.className = 'fa fa-remove text-danger';
 	item.appendChild(del);
+
+	item.addEventListener('click', (e) => { handle(e); }, false);
 
 	const list = old.parentNode.id;
 
