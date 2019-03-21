@@ -1,21 +1,27 @@
 function addItem() {
 	const input = document.getElementById('newItem').value;
-	const inputText = document.createTextNode(input);
 
-	const item = document.createElement('a');
-	item.href = '#';
-	item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
-	item.appendChild(inputText);
+	if (input === '')
+		document.getElementById('error').innerText = 'This cannot be empty';
+	else {
+		const inputText = document.createTextNode(input);
+		document.getElementById('error').innerText = '';
 
-	const del = document.createElement('span');
-	del.className = 'fa fa-remove text-danger';
-	item.appendChild(del);
+		const item = document.createElement('a');
+		item.href = '#';
+		item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+		item.appendChild(inputText);
 
-	item.addEventListener('click', (e) => { handle(e); }, false);
+		const del = document.createElement('span');
+		del.className = 'fa fa-remove text-danger';
+		item.appendChild(del);
 
-	const todoList = document.getElementById('todo');
-	todoList.insertBefore(item, todoList.firstChild);
-	document.getElementById('newItem').value = '';
+		item.addEventListener('click', (e) => { handle(e); }, false);
+
+		const todoList = document.getElementById('todo');
+		todoList.insertBefore(item, todoList.firstChild);
+		document.getElementById('newItem').value = '';
+	}
 }
 
 function handle(e) {
