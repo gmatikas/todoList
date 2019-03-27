@@ -1,25 +1,27 @@
 let db;
 
+// Initialization
+
 window.onload = () => {
 	const form = document.getElementById('form');
 	form.addEventListener('submit', () => { addItem(); }, false);
 
-	initDB();
+	initDbIDB();
 };
 
 // IndexedDB Implementation
 
-function initDB() {
+function initDbIDB() {
 	const request = window.indexedDB.open('ToDo', 1);
 
 	request.onsuccess = () => {
 		db = request.result;
-		displayData();
+		displayDataIDB();
 	};
 
 	request.onupgradeneeded = (e) => {
 		db = e.target.result;
-		constructDB();
+		constructDbIDB();
 	};
 
 	request.onerror = () => {
@@ -27,7 +29,7 @@ function initDB() {
 	};
 }
 
-function constructDB() {
+function constructDbIDB() {
 	const objectStore = db.createObjectStore('items', {
 		keyPath: 'id',
 		autoIncrement: true,
@@ -37,7 +39,7 @@ function constructDB() {
 	objectStore.createIndex('status', 'status', { unique: false });
 }
 
-function displayData() {
+function displayDataIDB() {
 	const transaction = db.transaction(['items'], 'readonly');
 	const objectStore = transaction.objectStore('items');
 
@@ -57,7 +59,7 @@ function displayData() {
 	};
 }
 
-function addData(text) {
+function addDataIDB(text) {
 	const transaction = db.transaction(['items'], 'readwrite');
 	const objectStore = transaction.objectStore('items');
 
@@ -78,7 +80,7 @@ function addData(text) {
 	};
 }
 
-function toggleData(id) {
+function toggleDataIDB(id) {
 	const transaction = db.transaction(['items'], 'readwrite');
 	const objectStore = transaction.objectStore('items');
 
@@ -99,7 +101,7 @@ function toggleData(id) {
 	};
 }
 
-function deleteData(id) {
+function deleteDataIDB(id) {
 	const transaction = db.transaction(['items'], 'readwrite');
 	const objectStore = transaction.objectStore('items');
 
@@ -123,7 +125,7 @@ function addItem() {
 	document.getElementById('newItemText').value = '';
 	document.getElementById('errorMsg').innerText = '';
 
-	addData(itemValue);
+	addDataIDB(itemValue);
 }
 
 function deleteNode(item) {
@@ -132,13 +134,13 @@ function deleteNode(item) {
 
 function toggleItem(item) {
 	const id = Number(item.getAttribute('item-id'));
-	toggleData(id);
+	toggleDataIDB(id);
 	deleteNode(item);
 }
 
 function deleteItem(item) {
 	const id = Number(item.getAttribute('item-id'));
-	deleteData(id);
+	deleteDataIDB(id);
 	deleteNode(item);
 }
 
