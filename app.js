@@ -1,45 +1,49 @@
 let db;
 
 window.onload = () => {
-	const addButton = document.getElementById('add');
-	addButton.addEventListener('click', () => {
-		addItem();
-	}, false);
+	const form = document.getElementById('form');
+	form.addEventListener('submit', () => { addItem(); }, false);
 
+	initDB();
+};
+
+// IndexedDB Implementation
+
+function initDB() {
 	const request = window.indexedDB.open('ToDo', 1);
-
-	request.onerror = () => {
-		throw new Error('Database failed to open');
-	};
 
 	request.onsuccess = () => {
 		db = request.result;
-
 		displayData();
 	};
 
 	request.onupgradeneeded = (e) => {
 		db = e.target.result;
-
-		const objectStore = db.createObjectStore('items', {
-			keyPath: 'id',
-			autoIncrement: true,
-		});
-
-		objectStore.createIndex('value', 'value', {
-			unique: false,
-		});
-		objectStore.createIndex('status', 'status', {
-			unique: false,
-		});
+		constructDB();
 	};
-};
+
+	request.onerror = () => {
+		throw new Error('Database failed to open');
+	};
+}
+
+function constructDB() {
+	const objectStore = db.createObjectStore('items', {
+		keyPath: 'id',
+		autoIncrement: true,
+	});
+
+	objectStore.createIndex('value', 'value', { unique: false });
+	objectStore.createIndex('status', 'status', { unique: false });
+}
 
 function displayData() {
-	const transaction = db.transaction(['items'], 'readwrite');
+	const transaction = db.transaction(['items'], 'readonly');
 	const objectStore = transaction.objectStore('items');
 
-	objectStore.openCursor().onsuccess = (e) => {
+	const request = objectStore.openCursor();
+
+	request.onsuccess = (e) => {
 		const cursor = e.target.result;
 
 		if (cursor) {
@@ -47,23 +51,58 @@ function displayData() {
 			cursor.continue();
 		}
 	};
+
+	transaction.onerror = () => {
+		throw new Error('Database transaction failed');
+	};
 }
 
-function handle(e) {
-	const t = e.target;
-
-	if (t.tagName === 'A') moveItem(t);
-	else {
-		deleteItem(t.parentNode);
-		deleteData(t.parentNode);
-	}
-}
-
-function deleteData(item) {
-	const id = Number(item.getAttribute('item-id'));
-
+function addData(text) {
 	const transaction = db.transaction(['items'], 'readwrite');
 	const objectStore = transaction.objectStore('items');
+
+	const item = {
+		value: text,
+		status: false,
+	};
+
+	const request = objectStore.add(item);
+
+	request.onsuccess = (e) => {
+		item.id = e.target.result;
+		renderItem(item);
+	};
+
+	transaction.onerror = () => {
+		throw new Error('Database transaction failed');
+	};
+}
+
+function toggleData(id) {
+	const transaction = db.transaction(['items'], 'readwrite');
+	const objectStore = transaction.objectStore('items');
+
+	const request = objectStore.get(id);
+
+	request.onsuccess = () => {
+		const item = request.result;
+
+		item.status = !item.status;
+
+		objectStore.put(item);
+
+		renderItem(item);
+	};
+
+	transaction.onerror = () => {
+		throw new Error('Database transaction failed');
+	};
+}
+
+function deleteData(id) {
+	const transaction = db.transaction(['items'], 'readwrite');
+	const objectStore = transaction.objectStore('items');
+
 	objectStore.delete(id);
 
 	transaction.onerror = () => {
@@ -71,94 +110,45 @@ function deleteData(item) {
 	};
 }
 
-function deleteItem(item) {
-	item.parentNode.removeChild(item);
-}
-
-function moveData(item) {
-	const id = Number(item.getAttribute('item-id'));
-
-	const transaction = db.transaction(['items'], 'readwrite');
-	const objectStore = transaction.objectStore('items');
-	const request = objectStore.get(id);
-
-	request.onsuccess = () => {
-		const oldItem = request.result;
-
-		oldItem.status = (oldItem.status + 1) % 2;
-
-		objectStore.put(oldItem);
-
-		renderItem(oldItem);
-	};
-
-	transaction.onerror = () => {
-		throw new Error('Database transaction failed');
-	};
-}
-
-function moveItem(oldItem) {
-	moveData(oldItem);
-	deleteItem(oldItem);
-}
-
-function addData(text) {
-	const transaction = db.transaction(['items'], 'readwrite');
-	const objectStore = transaction.objectStore('items');
-
-	const tmpItem = {
-		value: text,
-		status: 0,
-	};
-	const request = objectStore.add(tmpItem);
-
-	request.onsuccess = (e) => {
-		const newItem = {
-			id: e.target.result,
-			value: text,
-			status: 0,
-		};
-		renderItem(newItem);
-	};
-
-	transaction.onerror = () => {
-		throw new Error('Database transaction failed');
-	};
-}
-
-/**
- * Whether string has value.
- *
- * @return {bool}
- */
-function IsEmpty(text) {
-	return !(text.trim());
-}
+// Main Functionality
 
 function addItem() {
-	const text = document.getElementById('newItem').value;
+	const itemValue = document.getElementById('newItemText').value;
 
-	if (IsEmpty(text)) {
-		document.getElementById('error').innerText = 'This field cannot be empty';
+	if (IsEmpty(itemValue)) {
+		document.getElementById('errorMsg').innerText = 'This field cannot be empty';
 		return;
 	}
 
-	document.getElementById('error').innerText = '';
-	document.getElementById('newItem').value = '';
+	document.getElementById('newItemText').value = '';
+	document.getElementById('errorMsg').innerText = '';
 
-	addData(text);
+	addData(itemValue);
 }
 
-/**
- * Whether a task has been completed
- *
- * @param {string} status
- * @return {bool}
- */
-function IsCompleted(status) {
-	if (status === 0) return false;
+function deleteNode(item) {
+	item.parentNode.removeChild(item);
+}
 
-	return true;
+function toggleItem(item) {
+	const id = Number(item.getAttribute('item-id'));
+	toggleData(id);
+	deleteNode(item);
+}
+
+function deleteItem(item) {
+	const id = Number(item.getAttribute('item-id'));
+	deleteData(id);
+	deleteNode(item);
+}
+
+// Rendering Functions
+
+function handle(e) {
+	const t = e.target;
+
+	if (t.tagName === 'A') toggleItem(t);
+	else deleteItem(t.parentNode);
 }
 
 function renderItem(item) {
@@ -180,13 +170,25 @@ function renderItem(item) {
 	deleteIcon.className = 'fa fa-remove text-danger';
 	newItem.appendChild(deleteIcon);
 
+	let list;
+
 	if (IsCompleted(itemStatus)) {
 		newItem.className = 'list-group-item list-group-item-action list-group-item-success d-flex justify-content-between align-items-center';
+		list = document.getElementById('completed');
 	} else {
 		newItem.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+		list = document.getElementById('todo');
 	}
 
-	const list = document.getElementById(Number(itemStatus));
-
 	list.insertBefore(newItem, list.firstChild);
+}
+
+// Helpful Functions
+
+function IsEmpty(string) {
+	return !(string.trim());
+}
+
+function IsCompleted(status) {
+	return status;
 }
